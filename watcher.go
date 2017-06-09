@@ -9,11 +9,13 @@ type listener struct {
 	watchers map[string]*list.List
 }
 
+// Watcher :
 type Watcher struct {
 	Channel chan *Event
 	Remove  func()
 }
 
+// Event :
 type Event struct {
 	Action string
 	Value  interface{}

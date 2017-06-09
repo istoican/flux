@@ -6,11 +6,13 @@ import (
 	"github.com/istoican/flux/backend"
 )
 
+// DB :
 type DB struct {
 	event listener
 	store Datastore
 }
 
+// Get :
 func (db *DB) Get(key string) (interface{}, error) {
 	data, err := db.store.Get(key)
 	if err != nil {
@@ -26,19 +28,23 @@ func (db *DB) Get(key string) (interface{}, error) {
 	return val, nil
 }
 
+// Close :
 func (db *DB) Close() error {
 	return db.store.Close()
 }
 
+// Delete :
 func (db *DB) Delete(key string) error {
 	db.event.trigger(key, &Event{Action: "delete"})
 	return db.store.Del(key)
 }
 
+// Watch :
 func (db *DB) Watch(key string) *Watcher {
 	return db.event.watch(key)
 }
 
+// Put :
 func (db *DB) Put(key string, value interface{}) error {
 	val, err := json.Marshal(value)
 	if err != nil {
@@ -49,6 +55,7 @@ func (db *DB) Put(key string, value interface{}) error {
 	return db.store.Put(key, val)
 }
 
+// Open :
 func Open(file string) (*DB, error) {
 	b, err := backend.NewGoLevelDB(file)
 	if err != nil {
