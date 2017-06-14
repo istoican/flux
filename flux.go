@@ -1,70 +1,43 @@
 package flux
 
 import (
-	"encoding/json"
-
-	"github.com/istoican/flux/backend"
+	"github.com/istoican/flux/consistent"
+	"github.com/istoican/flux/storage"
 )
 
-// DB :
-type DB struct {
-	event listener
-	store Datastore
-}
-
-// Get :
-func (db *DB) Get(key string) (interface{}, error) {
-	data, err := db.store.Get(key)
-	if err != nil {
-		return nil, err
+// Start :
+func Start(config Config) (Flux, error) {
+	flux := Flux{
+		config:   config,
+		listener: newListener(),
+		peers:    consistent.New,
 	}
 
-	var val map[string]interface{}
+	return flux
+}
 
-	if err := json.Unmarshal(data, &val); err != nil {
-		return nil, err
+// Flux :
+type Node struct {
+	name     string
+	listener listener
+	store    storage.Store
+	peers    *consistent.Ring
+}
+
+func (node *Node) Lookup(key string) []byte {
+	if v, err := node.store.Get(key); err == nil {
+		return v
 	}
+	//peer := node.peers.Get(key)
+	//peer.Address
 
-	return val, nil
+	return ""
 }
 
-// Close :
-func (db *DB) Close() error {
-	return db.store.Close()
+func (node *Node) Watch(key string) {
+
 }
 
-// Delete :
-func (db *DB) Delete(key string) error {
-	db.event.trigger(key, &Event{Action: "delete"})
-	return db.store.Del(key)
-}
-
-// Watch :
-func (db *DB) Watch(key string) *Watcher {
-	return db.event.watch(key)
-}
-
-// Put :
-func (db *DB) Put(key string, value interface{}) error {
-	val, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-	db.event.trigger(key, &Event{Action: "change", Value: value})
-
-	return db.store.Put(key, val)
-}
-
-// Open :
-func Open(file string) (*DB, error) {
-	b, err := backend.NewGoLevelDB(file)
-	if err != nil {
-		return nil, err
-	}
-
-	db := &DB{
-		event: newListener(),
-		store: b,
-	}
-	return db, nil
+func (node *Node) Shutdown() error {
+	return node.store.Close()
 }

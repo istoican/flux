@@ -10,18 +10,25 @@ type Ring struct {
 	nodes Nodes
 }
 
-// Add :
-func (r *Ring) Add(id string) {
+// Add : Add anew node to the ring
+func (r *Ring) Add(address string) {
 	node := Node{
-		ID:   id,
-		hash: crc32.ChecksumIEEE([]byte(id)),
+		Address: address,
+		hash:    crc32.ChecksumIEEE([]byte(address)),
 	}
-	r.add(node)
-}
-
-func (r *Ring) add(node Node) {
 	nodes := append(r.nodes, node)
 	sort.Sort(nodes)
+	r.nodes = nodes
+}
+
+// Remove :
+func (r *Ring) Remove(address string) {
+	nodes := r.nodes[:0]
+	for _, n := range r.nodes {
+		if n.Address != address {
+			nodes = append(nodes, n)
+		}
+	}
 	r.nodes = nodes
 }
 

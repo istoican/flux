@@ -2,8 +2,8 @@ package consistent
 
 // Node :
 type Node struct {
-	ID   string
-	hash uint32
+	Address string
+	hash    uint32
 }
 
 // Nodes :
