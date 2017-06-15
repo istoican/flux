@@ -13,9 +13,9 @@ image:
 	docker build . -t "istoican/flux"
 
 tests:
-	docker-compose up -d
+	docker-compose up --build 
 
-build/flux-server:
+flux-server:
 	go build ./cmd/flux-server
 
 cmd/flux/flux.go.js:

@@ -6,7 +6,8 @@ import (
 )
 
 var (
-	node Node
+	node       Node
+	membership *memberlist.Memberlist
 )
 
 // Start :
@@ -15,16 +16,18 @@ func Start(config Config) error {
 		config: config,
 		event:  newListener(),
 		peers:  consistent.New(),
+		Stats:  Stats{},
 	}
 
 	memberlistConfig := memberlist.DefaultLocalConfig()
 	memberlistConfig.Events = &n
 
-	_, err := memberlist.Create(memberlistConfig)
+	l, err := memberlist.Create(memberlistConfig)
 	if err != nil {
 		return err
 	}
 	node = n
+	membership = l
 	return nil
 }
 
@@ -41,4 +44,14 @@ func Put(key string, value []byte) error {
 // Watch :
 func Watch(key string) *Watcher {
 	return node.Watch(key)
+}
+
+// Join :
+func Join(address string) error {
+	if address == "" {
+		return nil
+	}
+	_, err := membership.Join([]string{address})
+
+	return err
 }

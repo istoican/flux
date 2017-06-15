@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"expvar"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,13 +16,20 @@ import (
 	"github.com/istoican/flux/storage/memory"
 )
 
+var (
+	stats = expvar.NewMap("flux")
+)
+
 func init() {
-	handler := &Handler{}
+	handler := &Handler{
+		peers: make(map[string]*Peer),
+	}
 
 	onJoin := func(id string) {
+		log.Println("http JOIN: ", id)
 		handler.mu.Lock()
 		defer handler.mu.Unlock()
-		handler.peers[id] = Peer{id}
+		handler.peers[id] = &Peer{address: id}
 	}
 
 	onLeave := func(id string) {
@@ -47,19 +55,26 @@ func init() {
 // Handler :
 type Handler struct {
 	mu    sync.Mutex
-	peers map[string]Peer
+	peers map[string]*Peer
 }
 
 func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Path[1:]
 
+	defer func() {
+		s := flux.Info()
+		stats.Set("keys", &s.Keys)
+		stats.Set("inserts", &s.Inserts)
+		stats.Set("deletions", &s.Deletions)
+		stats.Set("reads", &s.Reads)
+	}()
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.Method {
 	case "GET":
 		if r.FormValue("watch") == "" {
 			value, err := flux.Get(key)
-			log.Println("GET: ", string(value), err)
+			log.Printf("GET(%s)", value)
 			response(w, string(value), err)
 			return
 		}
@@ -87,7 +102,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		body, _ := ioutil.ReadAll(r.Body)
 		v := string(body)
-		log.Println("PUT: ", v)
+		log.Printf("PUT(%s, %s)", key, v)
 		err := flux.Put(key, []byte(v))
 		response(w, v, err)
 		//case "DELETE":

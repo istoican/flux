@@ -2,8 +2,40 @@ version: '2'
 
 services:
   flux1:
-    image: debian
+    build: ./cmd/fluxd
+    hostname: flux1
+    expose:
+      - "8080"
+      - "7946"
   flux2:
-    image: debian
-    
-
+    build: ./cmd/fluxd
+    hostname: flux2
+    entrypoint: fluxd -join=flux1
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux1
+  flux3:
+    build: ./cmd/fluxd
+    hostname: flux3
+    entrypoint: fluxd -join=flux2
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux2
+  flux4:
+    build: ./cmd/fluxd
+    hostname: flux4
+    entrypoint: fluxd -join=flux3
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux3
+  client:
+     build: test
+     entrypoint: /run.sh http://flux1:8080
+     links:
+      - flux1
