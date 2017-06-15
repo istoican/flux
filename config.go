@@ -6,5 +6,9 @@ import (
 
 // Config :
 type Config struct {
-	datastore storage.Store
+	ID      string
+	Store   storage.Store
+	OnJoin  func(id string)
+	OnLeave func(id string)
+	Picker  Picker
 }

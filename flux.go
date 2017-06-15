@@ -1,43 +1,44 @@
 package flux
 
 import (
+	"github.com/hashicorp/memberlist"
 	"github.com/istoican/flux/consistent"
-	"github.com/istoican/flux/storage"
+)
+
+var (
+	node Node
 )
 
 // Start :
-func Start(config Config) (Flux, error) {
-	flux := Flux{
-		config:   config,
-		listener: newListener(),
-		peers:    consistent.New,
+func Start(config Config) error {
+	n := Node{
+		config: config,
+		event:  newListener(),
+		peers:  consistent.New(),
 	}
 
-	return flux
-}
+	memberlistConfig := memberlist.DefaultLocalConfig()
+	memberlistConfig.Events = &n
 
-// Flux :
-type Node struct {
-	name     string
-	listener listener
-	store    storage.Store
-	peers    *consistent.Ring
-}
-
-func (node *Node) Lookup(key string) []byte {
-	if v, err := node.store.Get(key); err == nil {
-		return v
+	_, err := memberlist.Create(memberlistConfig)
+	if err != nil {
+		return err
 	}
-	//peer := node.peers.Get(key)
-	//peer.Address
-
-	return ""
+	node = n
+	return nil
 }
 
-func (node *Node) Watch(key string) {
-
+// Get :
+func Get(key string) ([]byte, error) {
+	return node.Get(key)
 }
 
-func (node *Node) Shutdown() error {
-	return node.store.Close()
+// Put :
+func Put(key string, value []byte) error {
+	return node.Put(key, value)
+}
+
+// Watch :
+func Watch(key string) *Watcher {
+	return node.Watch(key)
 }

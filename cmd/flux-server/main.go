@@ -5,29 +5,20 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/istoican/flux"
-	"github.com/istoican/flux/store/memory"
-)
-
-const (
-	defaultMaxMemory = 32 << 20
+	_ "github.com/istoican/flux/http"
 )
 
 func main() {
 	flag.Parse()
 
-	address := flag.String("join", "", "join address")
+	_ = flag.String("join", "", "join address")
 
-	config := flux.Config{memory.NewStore()}
-	server := flux.Start(config)
-
-	if address != "" {
-		server.join(address)
-	}
-	http.Handle("/", server)
+	//if address != "" {
+	//	server.join(address)
+	//}
 
 	log.Println("starting server")
-	if err := http.ListenAndServe(*addr, nil); err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
 	}
 }

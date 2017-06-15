@@ -9,8 +9,8 @@ type Store struct {
 }
 
 // NewStore :
-func NewStore() Store {
-	return Store{m: make(map[string]string)}
+func NewStore() *Store {
+	return &Store{m: make(map[string]string)}
 }
 
 // Get :

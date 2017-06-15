@@ -9,6 +9,15 @@ install:
 deps:
 	cd vendor && $(NPM) install
 
+image: 
+	docker build . -t "istoican/flux"
+
+tests:
+	docker-compose up -d
+
+build/flux-server:
+	go build ./cmd/flux-server
+
 cmd/flux/flux.go.js:
 	$(TSC) -p cmd/flux --outFile $@
 

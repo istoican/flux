@@ -1,0 +1,9 @@
+version: '2'
+
+services:
+  flux1:
+    image: debian
+  flux2:
+    image: debian
+    
+
