@@ -55,3 +55,13 @@ func Join(address string) error {
 
 	return err
 }
+
+// Info :
+func Info() Stats {
+	return node.Stats
+}
+
+// Info :
+func Nodes() []*memberlist.Node {
+	return membership.Members()
+}

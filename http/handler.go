@@ -50,6 +50,7 @@ func init() {
 	flux.Start(config)
 
 	http.Handle("/", handler)
+	http.HandleFunc("/debug/nodes", nodesHandler)
 }
 
 // Handler :
@@ -121,6 +122,18 @@ func (handler *Handler) Pick(key string) flux.Peer {
 
 func response(w io.Writer, value interface{}, err error) {
 	if err := json.NewEncoder(w).Encode(value); err != nil {
+		log.Printf("error %v \n", err)
+	}
+}
+
+func nodesHandler(w http.ResponseWriter, r *http.Request) {
+	nodes := make(map[string]string)
+
+	for _, n := range flux.Nodes() {
+		nodes[n.Name] = n.Addr.String()
+	}
+
+	if err := json.NewEncoder(w).Encode(nodes); err != nil {
 		log.Printf("error %v \n", err)
 	}
 }

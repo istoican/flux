@@ -1,5 +1,5 @@
 FROM debian
 
-ADD flux-server /usr/bin/flux-server
+ADD fluxd /usr/bin/fluxd
 
-ENTRYPOINT ["flux-server"]
+ENTRYPOINT ["fluxd"]

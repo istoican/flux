@@ -69,8 +69,3 @@ func (node *Node) NotifyLeave(n *memberlist.Node) {
 func (node *Node) NotifyUpdate(n *memberlist.Node) {
 
 }
-
-// Info :
-func Info() Stats {
-	return node.Stats
-}

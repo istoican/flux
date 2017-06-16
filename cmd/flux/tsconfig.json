@@ -1,9 +1,0 @@
-{
-    "compilerOptions": {
-        "sourceMap": true,
-        "module": "system",
-        "jsx": "react",
-        "strict": true,
-        "typeRoots": ["../../vendor/node_modules/@types"]
-    }
-}

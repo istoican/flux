@@ -35,6 +35,13 @@ services:
     links:
       - flux3
   client:
+    build: ./cmd/flux
+    entrypoint: flux
+    ports:
+      - "3000:80"
+    links:
+      - flux1
+  test:
      build: test
      entrypoint: /run.sh http://flux1:8080
      links:
