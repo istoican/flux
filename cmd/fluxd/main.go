@@ -7,7 +7,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/istoican/flux"
-	_ "github.com/istoican/flux/http"
+	_ "github.com/istoican/flux/transport/http"
 )
 
 var joinAddress string

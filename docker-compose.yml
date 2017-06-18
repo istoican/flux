@@ -34,15 +34,78 @@ services:
       - "7946"
     links:
       - flux3
+  flux5:
+    build: ./cmd/fluxd
+    hostname: flux5
+    entrypoint: fluxd -join=flux4
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux4
+  flux6:
+    build: ./cmd/fluxd
+    hostname: flux6
+    entrypoint: fluxd -join=flux5
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux5
+  flux7:
+    build: ./cmd/fluxd
+    hostname: flux7
+    entrypoint: fluxd -join=flux6
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux6
+  flux8:
+    build: ./cmd/fluxd
+    hostname: flux8
+    entrypoint: fluxd -join=flux7
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux7
+  flux9:
+    build: ./cmd/fluxd
+    hostname: flux9
+    entrypoint: fluxd -join=flux8
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux8
+  flux10:
+    build: ./cmd/fluxd
+    hostname: flux10
+    entrypoint: fluxd -join=flux9
+    expose:
+      - "8080"
+      - "7946"
+    links:
+      - flux9  
   client:
     build: ./cmd/flux
-    entrypoint: flux
+    entrypoint: flux -servers=flux1,flux2,flux3,flux4,flux5,flux6,flux7,flux8,flux9,flux10
     ports:
       - "3000:80"
     links:
       - flux1
+      - flux2
+      - flux3
+      - flux4
+      - flux5
+      - flux6
+      - flux7
+      - flux8
+      - flux9
+      - flux10
   test:
      build: test
-     entrypoint: /run.sh http://flux1:8080
+     entrypoint: /run.sh http://flux1:8080 0.0001
      links:
       - flux1

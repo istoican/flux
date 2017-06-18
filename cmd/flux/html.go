@@ -15,136 +15,190 @@ const html = `
     	<meta charset="utf-8">
     	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>Flux - Dashboard</title>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter/1.3.12/crossfilter.min.js"></script>
-		<script src="http://cdnjs.cloudflare.com/ajax/libs/dc/2.1.6/dc.min.js"></script>
-		<link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/dc/2.1.6/dc.css"/>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.13/c3.min.js"></script>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.13/c3.min.css"/>
+		<style>
+			body {
+				background: #f8f8f8;
+				margin: 0;
+			}
+			.container {
+				width: 1200px;
+				margin: 2em auto 4em auto;
+			}
+			.chart {
+				background: #fff;
+				width: 550px;
+				float: left;
+				padding: 15px;
+				margin: 10px;
+				box-shadow: 0 0 5px #888;
+			}
+			.overview {
+				
+			}
+			body > header {
+				color: #fff;
+				background: #636387;
+				padding: 1em 3em;
+			}
+			body > header h1 {
+				font-weight: normal;
+				margin: 0;
+			}
+		</style>
+		<script>
+		  	var __DATA__ = {{ . }};
+		</script>
 	</head>
   	<body>
-	  	<div id="memory-chart"></div>
-		<div id="cpu-chart"></div>
-		<div id="keys-chart"></div>
-		<div id="inserts-chart"></div>
-		<div id="reads-chart"></div>
-
+	  	<header>
+		  <h1>Flux</h1>
+		</header>
+		<div class="container">
+			<div class="overview" id="overview-chart">
+			</div>
+			<div class="chart">
+				<h3>Numar de inserari</h3>
+				<div id="inserts-chart">
+				</div>
+			</div>
+			<div class="chart">
+				<h3>Numar de citiri</h3>
+				<div id="reads-chart">
+				</div>
+			</div>
+			<div class="chart">
+				<h3>Memorie</h3>
+				<div id="memory-chart">
+				</div>
+			</div>
+			<div class="chart">
+				<h3>Numar de chei</h3>
+				<div id="keys-chart">
+				</div>
+			</div>
+			<!--
+			<div class="chart">
+				<h3>Numar de stergeri</h3>
+				<div id="deletions-chart">
+				</div>
+			</div>
+			-->
+		</div>
 	  	<script>
-		  /*
-		  	var __DATA__ = [
-				{
-					name: 'f1',
-					address: '172.0.0.1',
-					stats: [
-						{
-							when: '2017-06-16T14:01:33',
-							memory: 2,
-						},
-						{
-							when: '2017-06-16T14:01:33',
-							memory: 2,
-						},
-					]
-				},
-				{
-					name: 'f2',
-					address: '172.0.0.2',
-					stats: [
-						{
-							when: '2017-06-16T14:01:33',
-							memory: 2,
-						},
-						{
-							when: '2017-06-16T14:01:33',
-							memory: 2,
-						},
-					]
-				}
+			var chartTypes = [
+				{ type: 'memory', label: 'Memory [MB]', getter: function(v) { return v / (1024*1024); } }, 
+				{ type: 'keys', label: 'Keys' }, 
+				{ type: 'inserts', label: 'Inserts' }, 
+				{ type: 'reads', label: 'reads' }
 			];
-			*/
+		
+			function get_columns(data, type, getter) {
+				var output = [],
+					columns = {};
 
-			var __DATA__ = [
-				{
-					date: '2017-06-16T14:01:33',
-					stats: {
-						'f1': {
-							memory: 2
+				for (var i = 0; i < data.length; i++) {
+					if (columns['x'] == undefined) {
+						columns['x'] = [];
+					} 
+					columns['x'].push(new Date(data[i].date));
+					for (var j = 0; j < data[i].stats.length; j++) {
+						var node = data[i].stats[j].node;
+						var val = data[i].stats[j][type];
+						if (columns[node] == undefined) {
+							columns[node] = [];
+						}
+						columns[node].push(getter? getter(val) : val); 
+					}
+				}
+
+				var keys = Object.keys(columns);
+				for (var i = 0; i < keys.length; i++) {
+					var key = keys[i];
+					output.push([key].concat(columns[key]));
+				}
+				return output;
+			}
+
+		  	function draw(type, label, getter) {
+				var columns = get_columns(__DATA__, type, getter);  
+				var dataTypes = {};
+				var dataGroups = [];
+
+				for (var i = 1; i < columns.length; i++) {
+					dataGroups.push(columns[i][0]);
+				}
+
+				for (var i = 0; i < dataGroups.length; i++) {
+					dataTypes[dataGroups[i]] = 'area-spline';
+				}
+
+				c3.generate({
+					bindto: '#' + type + '-chart',
+					data: {
+						x: 'x',
+						columns: columns,
+						//types: dataTypes,
+						//groupd: dataGroups
+					},
+					point: {
+						show: false
+					},
+					axis: {
+						x: {
+							type: 'timeseries',
+							tick: {
+								format: '%M:%S',
+								count: 10,
+								outer: true
+							}
 						},
-						'f2': {
-							memory: 2
+						y: {
+							label: {
+								text: label,
+								position: 'outer-middle'
+							}
 						}
 					}
-				},
-				{
-					date: '2017-06-16T14:01:33',
-					stats: {
-						'f1': {
-							memory: 2
-						},
-						'f2': {
-							memory: 2
-						},
-						'f3': {
-							memory: 2
-						}
-					}
+				});
+			};
+			
+			function overview() {
+				var keys = [],
+					sum = 0;
+					nodes = __DATA__[__DATA__.length - 1].stats;
+
+				for (var i = 0; i < nodes.length; i++) {
+					var n = nodes[i].node,
+						v = nodes[i].keys;
+					sum = sum + v;
+					keys.push([n, v]);
 				}
-			];
-
-		  	(function() {
-				var memoryChart = dc.lineChart('#memory-chart');
-				var cpuChart = dc.lineChart('#cpu-chart');
-				var keysChart = dc.lineChart('#keys-chart');
-				var insertsChart = dc.lineChart('#insets-chart');
-				var readsChart = dc.lineChart('#reads-chart');
-
-				var ndx = crossfilter(__DATA__);
-
-				var dimension = ndx.dimension(function(d) {
-        			return new Date(d.date);
-    			});
-				var nodes = [];
-
-				
-
-				var nodeGroup = dimension.group();
-				var memoryGroup = dimension.group().reduce(function(p, v) {
-                  	for (var key in v.stats) {
-  						if (v.stats.hasOwnProperty(key)) {
-    						p[key] = v.stats[key].memory;
-  						}
+				c3.generate({
+					bindto: '#overview-chart',
+					data: {
+						columns: keys,
+						type: 'donut'
+					},
+					donut: {
+						title: sum
 					}
-				  	return p;
-              	}, function(p, v) {
-                  	return p;
-              	}, function() {
-                	return {};
-              	});
+				});
+			};
 
-				function for_node(node_name) {
-					return function(d) {
-						return d.value[node_name];
-					}
-				}
+			(function () {
+				overview();
+				for (var i = 0; i < chartTypes.length; i++) {
+					var type = chartTypes[i].type;
+					var label = chartTypes[i].label;
+					var getter = chartTypes[i].getter;
 
-				memoryChart
-					.renderArea(true)
-					.width(990)
-					.height(200)
-					.transitionDuration(1000)
-					.margins({
-						top: 30,
-						right: 50,
-						bottom: 25,
-						left: 40
-					})
-					.x(d3.time.scale().domain([d3.time.hour.offset(new Date(), -1), new Date()]))
-					.dimension(dimension)
-					.group(memoryGroup, __DATA__[0].name, for_node(__DATA__[0].name));
-				for(var i = 1; i < __DATA__.length; ++i) {
-              		memoryChart.stack(memoryGroup, __DATA__[i].name, for_node(__DATA__[i].name));
+					draw(type, label, getter);
 				}
-          		memoryChart.render();
 			})();
-	  	</script>
+  	</script>
 	</body>
 </html>  	
 `

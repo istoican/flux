@@ -1,9 +1,10 @@
 package consistent
 
 // New :
-func New() *Ring {
+func New(fn HashFn) *Ring {
 	nodes := []Node{}
 	return &Ring{
-		nodes: nodes,
+		nodes:  nodes,
+		hashFn: fn,
 	}
 }

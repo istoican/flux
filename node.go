@@ -1,8 +1,6 @@
 package flux
 
 import (
-	"log"
-
 	"github.com/hashicorp/memberlist"
 	"github.com/istoican/flux/consistent"
 )
@@ -18,7 +16,7 @@ type Node struct {
 // Get :
 func (node *Node) Get(key string) ([]byte, error) {
 	id := node.peers.Get(key).Address
-	log.Println("Id: ", id, node.config.ID)
+	//log.Println("Id: ", id, node.config.ID)
 	if id == node.config.ID {
 		node.Stats.Reads.Increment()
 		return node.config.Store.Get(key)
@@ -30,7 +28,7 @@ func (node *Node) Get(key string) ([]byte, error) {
 // Put :
 func (node *Node) Put(key string, value []byte) error {
 	id := node.peers.Get(key).Address
-	log.Println("PUT internal id: ", id)
+	//log.Println("PUT internal id: ", id)
 	if id == node.config.ID {
 		node.event.trigger(key, &Event{Type: "put", Value: value})
 		node.Stats.Inserts.Increment()
@@ -39,7 +37,7 @@ func (node *Node) Put(key string, value []byte) error {
 		return node.config.Store.Put(key, value)
 	}
 	peer := node.config.Picker.Pick(id)
-	log.Println("PUT forward to peer: ", peer)
+	//log.Println("PUT forward to peer: ", peer)
 	return peer.Put(key, value)
 }
 

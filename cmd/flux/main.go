@@ -4,23 +4,21 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"strings"
 )
 
-var joinAddress string
+var servers string
 
 func init() {
-	flag.StringVar(&joinAddress, "join", "", "join address")
+	flag.StringVar(&servers, "servers", "", "servers")
 }
 
 func main() {
 	flag.Parse()
 
-	http.HandleFunc("/", index)
-	http.HandleFunc("/flux.json", flux)
+	http.HandleFunc("/", indexHandler)
 
-	//f err := flux.Join(joinAddress); err != nil {
-	//	log.Println(err)
-	//}
+	go record(strings.Split(servers, ","))
 
 	log.Println("starting client")
 	if err := http.ListenAndServe(":80", nil); err != nil {
@@ -28,10 +26,6 @@ func main() {
 	}
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	tmpl.Execute(w, nil)
-}
-
-func flux(w http.ResponseWriter, r *http.Request) {
-
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl.Execute(w, stats)
 }
