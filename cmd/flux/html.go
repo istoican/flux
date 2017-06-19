@@ -40,7 +40,7 @@ const html = `
 			}
 			body > header {
 				color: #fff;
-				background: #636387;
+				background: #4958B8;
 				padding: 1em 3em;
 			}
 			body > header h1 {
