@@ -83,7 +83,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		if r.FormValue("watch") == "" {
 			value, err := flux.Get(key)
-			//log.Printf("GET(%s)", value)
+			log.Printf("GET(%s)", value)
 			response(w, string(value), err)
 			return
 		}
@@ -111,7 +111,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		body, _ := ioutil.ReadAll(r.Body)
 		v := string(body)
-		//log.Printf("PUT(%s, %s)", key, v)
+		log.Printf("PUT(%s, %s)", key, v)
 		err := flux.Put(key, []byte(v))
 		response(w, v, err)
 		//case "DELETE":
