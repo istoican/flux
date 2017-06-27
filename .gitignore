@@ -1,2 +1,4 @@
 cmd/flux/flux
 cmd/fluxd/fluxd
+*.js.go
+*.css.go
