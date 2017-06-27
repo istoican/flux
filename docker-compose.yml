@@ -4,13 +4,16 @@ services:
   flux1:
     build: ./cmd/fluxd
     hostname: flux1
+    entrypoint: fluxd -hashfn=md5
     expose:
       - "8080"
       - "7946"
+    ports:
+      - "3001:8080"
   flux2:
     build: ./cmd/fluxd
     hostname: flux2
-    entrypoint: fluxd -join=flux1
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
@@ -19,93 +22,84 @@ services:
   flux3:
     build: ./cmd/fluxd
     hostname: flux3
-    entrypoint: fluxd -join=flux2
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux2
+      - flux1
   flux4:
     build: ./cmd/fluxd
     hostname: flux4
-    entrypoint: fluxd -join=flux3
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux3
+      - flux1
   flux5:
     build: ./cmd/fluxd
     hostname: flux5
-    entrypoint: fluxd -join=flux4
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux4
+      - flux1
   flux6:
     build: ./cmd/fluxd
     hostname: flux6
-    entrypoint: fluxd -join=flux5
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux5
+      - flux1
   flux7:
     build: ./cmd/fluxd
     hostname: flux7
-    entrypoint: fluxd -join=flux6
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux6
+      - flux1
   flux8:
     build: ./cmd/fluxd
     hostname: flux8
-    entrypoint: fluxd -join=flux7
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux7
+      - flux1
   flux9:
     build: ./cmd/fluxd
     hostname: flux9
-    entrypoint: fluxd -join=flux8
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux8
+      - flux1
   flux10:
     build: ./cmd/fluxd
     hostname: flux10
-    entrypoint: fluxd -join=flux9
+    entrypoint: fluxd -hashfn=md5 -join=flux1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux9  
+      - flux1
   client:
     build: ./cmd/flux
-    entrypoint: flux -servers=flux1,flux2,flux3,flux4,flux5,flux6,flux7,flux8,flux9,flux10
+    entrypoint: flux -server=flux1
     ports:
       - "3000:80"
     links:
       - flux1
-      - flux2
-      - flux3
-      - flux4
-      - flux5
-      - flux6
-      - flux7
-      - flux8
-      - flux9
-      - flux10
   test:
      build: test
-     entrypoint: /run.sh http://flux1:8080 0.0001
+     entrypoint: /run.sh http://flux1:8080 0.5
      links:
       - flux1

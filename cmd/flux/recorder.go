@@ -35,9 +35,14 @@ type expvars struct {
 	Flux     flux.Stats
 }
 
-func record(servers []string) {
+func record(server string) {
 	for {
 		var i []nodeInfo
+		servers, err := nodes(server)
+		if err != nil {
+			log.Panicln(err)
+			continue
+		}
 		for _, server := range servers {
 			info, err := read(server)
 			if err != nil {
@@ -46,10 +51,34 @@ func record(servers []string) {
 			i = append(i, info)
 		}
 		stats = append(stats, Stats{Date: time.Now(), Stats: i})
-		//v, _ := json.Marshal(i)
-		//log.Println("STATS: ", string(v))
+
+		if len(stats) > 3600 {
+			stats = stats[1:]
+		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func nodes(node string) ([]string, error) {
+	var data map[string]string
+
+	resp, err := http.Get("http://" + node + ":8080/debug/nodes")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+	output := make([]string, 0)
+	for _, v := range data {
+		output = append(output, v)
+	}
+	log.Println(len(data))
+	log.Println(output)
+
+	return output, nil
 }
 
 func read(node string) (nodeInfo, error) {

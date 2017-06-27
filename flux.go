@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/istoican/flux/consistent"
-	"github.com/istoican/flux/consistent/hash"
 )
 
 const (
@@ -23,13 +22,13 @@ func Start(config Config) error {
 	n := Node{
 		config: config,
 		event:  newListener(),
-		peers:  consistent.New(hash.MD5),
+		peers:  consistent.New(config.HashFn),
 		Stats:  Stats{},
 	}
 
 	memberlistConfig := memberlist.DefaultLocalConfig()
-	memberlistConfig.GossipInterval = gossipInterval
-	memberlistConfig.GossipNodes = gossipNodes
+	//memberlistConfig.GossipInterval = gossipInterval
+	//memberlistConfig.GossipNodes = gossipNodes
 	memberlistConfig.Events = &n
 
 	l, err := memberlist.Create(memberlistConfig)

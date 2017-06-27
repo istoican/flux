@@ -10,46 +10,40 @@ import (
 	"net/http"
 	"sync"
 
-	"os"
-
 	"time"
 
 	"github.com/istoican/flux"
-	"github.com/istoican/flux/storage/memory"
 )
 
 var (
-	stats = expvar.NewMap("flux")
+	stats   = expvar.NewMap("flux")
+	handler *httpHandler
 )
 
+// Join :
+func Join(id string) {
+	log.Println("JOIN: ", id)
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+	handler.peers[id] = &Peer{address: id}
+}
+
+// Leave :
+func Leave(id string) {
+	handler.mu.Lock()
+	defer handler.mu.Unlock()
+	delete(handler.peers, id)
+}
+
+// Handler :
+func Handler() flux.Picker {
+	return handler
+}
+
 func init() {
-	handler := &Handler{
+	handler = &httpHandler{
 		peers: make(map[string]*Peer),
 	}
-
-	onJoin := func(id string) {
-		//log.Println("http JOIN: ", id)
-		handler.mu.Lock()
-		defer handler.mu.Unlock()
-		handler.peers[id] = &Peer{address: id}
-	}
-
-	onLeave := func(id string) {
-		handler.mu.Lock()
-		defer handler.mu.Unlock()
-		delete(handler.peers, id)
-	}
-
-	hostname, _ := os.Hostname()
-
-	config := flux.Config{
-		ID:      hostname,
-		Store:   memory.NewStore(),
-		OnJoin:  onJoin,
-		OnLeave: onLeave,
-		Picker:  handler,
-	}
-	flux.Start(config)
 
 	http.Handle("/", handler)
 	http.HandleFunc("/debug/nodes", nodesHandler)
@@ -68,13 +62,12 @@ func init() {
 	}()
 }
 
-// Handler :
-type Handler struct {
+type httpHandler struct {
 	mu    sync.Mutex
 	peers map[string]*Peer
 }
 
-func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Path[1:]
 
 	w.Header().Set("Content-Type", "application/json")
@@ -83,7 +76,7 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		if r.FormValue("watch") == "" {
 			value, err := flux.Get(key)
-			//log.Printf("GET(%s)", value)
+			log.Printf("GET(%s)", key)
 			response(w, string(value), err)
 			return
 		}
@@ -111,17 +104,14 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		body, _ := ioutil.ReadAll(r.Body)
 		v := string(body)
-		//log.Printf("PUT(%s, %s)", key, v)
+		log.Printf("PUT(%s, %s)", key, v)
 		err := flux.Put(key, []byte(v))
 		response(w, v, err)
-		//case "DELETE":
-		//	err := flux.Delete(key)
-		//	response(w, nil, err)
 	}
 }
 
 // Pick :
-func (handler *Handler) Pick(key string) flux.Peer {
+func (handler *httpHandler) Pick(key string) flux.Peer {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
 	peer, _ := handler.peers[key]

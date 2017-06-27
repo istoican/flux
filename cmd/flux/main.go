@@ -4,13 +4,12 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"strings"
 )
 
-var servers string
+var server string
 
 func init() {
-	flag.StringVar(&servers, "servers", "", "servers")
+	flag.StringVar(&server, "server", "", "server")
 }
 
 func main() {
@@ -18,7 +17,7 @@ func main() {
 
 	http.HandleFunc("/", indexHandler)
 
-	go record(strings.Split(servers, ","))
+	go record(server)
 
 	log.Println("starting client")
 	if err := http.ListenAndServe(":80", nil); err != nil {
