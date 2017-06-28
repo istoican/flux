@@ -8,6 +8,9 @@ const (
 	replicas = 256
 )
 
+// HashFn :
+type HashFn func(string) uint32
+
 // Ring :
 type Ring struct {
 	nodes  Nodes
@@ -50,23 +53,3 @@ func (r *Ring) Get(key string) Node {
 
 	return r.nodes[i]
 }
-
-// HashFn :
-type HashFn func(string) uint32
-
-/*
-func hash(key string) uint32 {
-	if len(key) < 64 {
-		var scratch [64]byte
-		copy(scratch[:], key)
-		return crc32.ChecksumIEEE(scratch[:len(key)])
-	}
-	return crc32.ChecksumIEEE([]byte(key))
-}
-*/
-
-//func MD5Hhash(key string) string {
-//	m := md5.New()
-//	m.Write([]byte(key))
-//	return string(m.Sum(nil))
-//}

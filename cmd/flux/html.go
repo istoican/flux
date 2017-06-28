@@ -1,7 +1,3 @@
-//go:generate ../../embed.sh https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js
-//go:generate ../../embed.sh https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.13/c3.min.js
-//go:generate ../../embed.sh https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.13/c3.min.css
-
 package main
 
 import (
@@ -19,9 +15,9 @@ const html = `
     	<meta charset="utf-8">
     	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>Flux - Dashboard</title>
-		<script type="text/javascript" src="/d3.min.js"></script>
-		<script type="text/javascript" src="/c3.min.js"></script>
-		<link rel="stylesheet" href="/c3.min.css"/>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.13/c3.min.js"></script>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.13/c3.min.css"/>
 		<style>
 			body {
 				background: #f8f8f8;
