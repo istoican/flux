@@ -6,6 +6,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
+	"time"
+
 	"github.com/istoican/flux"
 	"github.com/istoican/flux/consistent/hash"
 	"github.com/istoican/flux/storage/disk"
@@ -44,10 +46,12 @@ func main() {
 	}
 	flux.Start(config)
 
-	if err := flux.Join(joinAddress); err != nil {
-		log.Println(err)
-	}
-
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		if err := flux.Join(joinAddress); err != nil {
+			log.Println(err)
+		}
+	}()
 	log.Println("starting node")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)

@@ -93,13 +93,13 @@ services:
       - node1
   client:
     build: ./cmd/flux
-    entrypoint: flux -server=flux1
+    entrypoint: flux -server=node1
     ports:
       - "3000:80"
     links:
-      - flux1
+      - node1
   test:
      build: test
-     entrypoint: /run.sh http://flux1:8080 0.5
+     entrypoint: /run.sh http://node1:8080 0.5
      links:
-      - flux1
+      - node1

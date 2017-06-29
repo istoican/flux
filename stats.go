@@ -1,32 +1,31 @@
 package flux
 
 import (
-	"strconv"
 	"sync/atomic"
 )
 
-// Statistics :
+// Stats :
 type Stats struct {
-	Keys      Counter
-	Deletions Counter
-	Inserts   Counter
-	Reads     Counter
+	Keys      Int
+	Deletions Int
+	Inserts   Int
+	Reads     Int
 }
 
-type Counter int64
+// Int :
+type Int int64
 
-func (c *Counter) Increment() {
+// Increment :
+func (c *Int) Increment() {
 	atomic.AddInt64((*int64)(c), 1)
 }
 
-func (c *Counter) Decrement() {
+// Decrement :
+func (c *Int) Decrement() {
 	atomic.AddInt64((*int64)(c), -1)
 }
 
-func (c *Counter) Get() int64 {
-	return atomic.LoadInt64((*int64)(c))
-}
-
-func (c *Counter) String() string {
-	return strconv.FormatInt(c.Get(), 10)
+// Set :
+func (c *Int) Set(v int64) {
+	atomic.StoreInt64((*int64)(c), v)
 }

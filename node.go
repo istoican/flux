@@ -33,11 +33,13 @@ func (node *Node) Put(key string, value []byte) error {
 	id := node.peers.Get(key).Address
 	//log.Println("PUT internal id: ", id)
 	if id == node.config.ID {
-		node.event.trigger(key, &Event{Type: "put", Value: value})
+		if err := node.config.Store.Put(key, value); err != nil {
+			return err
+		}
 		node.Stats.Inserts.Increment()
-		node.Stats.Keys.Increment()
-
-		return node.config.Store.Put(key, value)
+		node.Stats.Keys.Set(int64(len(node.config.Store.Keys())))
+		node.event.trigger(key, &Event{Type: "put", Value: value})
+		return nil
 	}
 	peer := node.config.Picker.Pick(id)
 	//log.Println("PUT forward to peer: ", peer)
@@ -76,7 +78,8 @@ func (node *Node) NotifyJoin(n *memberlist.Node) {
 
 // NotifyLeave :
 func (node *Node) NotifyLeave(n *memberlist.Node) {
-	node.peers.Remove(n.Address())
+	node.peers.Remove(n.Name)
+	//log.Println("PEERS2: ", node.peers)
 	node.config.OnLeave(n.Name)
 }
 
@@ -96,5 +99,7 @@ func (node *Node) move(key string, to Peer) error {
 	if err := node.config.Store.Del(key); err != nil {
 		return err
 	}
+	node.Stats.Keys.Set(int64(len(node.config.Store.Keys())))
+	log.Println("MOVED: ", node.Stats.Keys.Value())
 	return nil
 }

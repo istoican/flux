@@ -37,10 +37,8 @@ func (db *GoLevelDB) Del(key string) error {
 func (db *GoLevelDB) Keys() []string {
 	it := db.backend.NewIterator(nil, nil)
 	keys := make([]string, 0)
-	i := 0
 	for it.Next() {
-		keys[i] = string(it.Key())
-		i++
+		keys = append(keys, string(it.Key()))
 	}
 	return keys
 }

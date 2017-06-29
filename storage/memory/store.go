@@ -1,6 +1,7 @@
 package memory
 
 import "sync"
+import "log"
 
 // Store :
 type Store struct {
@@ -34,7 +35,8 @@ func (store *Store) Put(key string, value []byte) error {
 // Del :
 func (store *Store) Del(key string) error {
 	delete(store.m, key)
-
+	log.Println("DEl key: ", key)
+	log.Println("DEL leys: ", store.m)
 	return nil
 }
 
@@ -43,11 +45,10 @@ func (store *Store) Keys() []string {
 	store.RLock()
 	defer store.RUnlock()
 	keys := make([]string, 0)
-	i := 0
 	for k := range store.m {
-		keys[i] = k
-		i++
+		keys = append(keys, k)
 	}
+	log.Println(keys)
 	return keys
 }
 
