@@ -1,5 +1,7 @@
 GO := go
 
+SERVICES := node1 client
+
 install:
 	$(GO) install github.com/istoican/flux
 
@@ -9,8 +11,8 @@ deps:
 image: 
 	docker build . -t "istoican/flux"
 
-tests:
-	docker-compose up --build ${TEST}
+docker:
+	docker-compose up --build ${SERVICES}
 
 cmd/fluxd/fluxd:
 	go build -o $@ ./$(@D)

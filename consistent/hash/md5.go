@@ -12,10 +12,4 @@ func MD5(key string) (out uint32) {
 	hash := m.Sum(nil)
 
 	return uint32(new(big.Int).SetBytes(hash).Uint64())
-	//for i, b := range hash {
-	//	shift := uint32((16 - i - 1) * 8)
-	//
-	//		out |= uint32(b) << shift
-	//	}
-	//return
 }

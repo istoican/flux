@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"runtime"
 	"time"
-
-	"github.com/istoican/flux"
 )
 
 var (
@@ -32,7 +30,14 @@ type nodeInfo struct {
 
 type expvars struct {
 	Memstats runtime.MemStats
-	Flux     flux.Stats
+	Flux     fluxStats
+}
+
+type fluxStats struct {
+	Keys      int64
+	Deletions int64
+	Inserts   int64
+	Reads     int64
 }
 
 func record(server string) {
@@ -75,8 +80,6 @@ func nodes(node string) ([]string, error) {
 	for _, v := range data {
 		output = append(output, v)
 	}
-	log.Println(len(data))
-	log.Println(output)
 
 	return output, nil
 }
@@ -96,9 +99,9 @@ func read(node string) (nodeInfo, error) {
 		return info, err
 	}
 	info.Memory = exp.Memstats.Alloc
-	info.Reads = exp.Flux.Reads.Get()
-	info.Deletions = exp.Flux.Deletions.Get()
-	info.Inserts = exp.Flux.Inserts.Get()
-	info.Keys = exp.Flux.Keys.Get()
+	info.Reads = exp.Flux.Reads
+	info.Deletions = exp.Flux.Deletions
+	info.Inserts = exp.Flux.Inserts
+	info.Keys = exp.Flux.Keys
 	return info, nil
 }

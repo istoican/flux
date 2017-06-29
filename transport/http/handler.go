@@ -10,13 +10,10 @@ import (
 	"net/http"
 	"sync"
 
-	"time"
-
 	"github.com/istoican/flux"
 )
 
 var (
-	stats   = expvar.NewMap("flux")
 	handler *httpHandler
 )
 
@@ -32,7 +29,9 @@ func Join(id string) {
 func Leave(id string) {
 	handler.mu.Lock()
 	defer handler.mu.Unlock()
+	log.Println("DEL: ", id)
 	delete(handler.peers, id)
+	log.Println("PEERS: ", handler.peers)
 }
 
 // Handler :
@@ -47,19 +46,7 @@ func init() {
 
 	http.Handle("/", handler)
 	http.HandleFunc("/debug/nodes", nodesHandler)
-
-	go func() {
-		for {
-			s := flux.Info()
-
-			stats.Set("keys", &s.Keys)
-			stats.Set("inserts", &s.Inserts)
-			stats.Set("deletions", &s.Deletions)
-			stats.Set("reads", &s.Reads)
-
-			time.Sleep(10 * time.Millisecond)
-		}
-	}()
+	expvar.Publish("flux", expvar.Func(flux.Info))
 }
 
 type httpHandler struct {
