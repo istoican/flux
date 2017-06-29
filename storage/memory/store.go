@@ -38,6 +38,19 @@ func (store *Store) Del(key string) error {
 	return nil
 }
 
+// Keys :
+func (store *Store) Keys() []string {
+	store.RLock()
+	defer store.RUnlock()
+	keys := make([]string, 0)
+	i := 0
+	for k := range store.m {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
 // Close :
 func (store *Store) Close() error {
 	return nil

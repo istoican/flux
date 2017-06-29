@@ -1,6 +1,9 @@
 package flux
 
 import (
+	"log"
+	"time"
+
 	"github.com/hashicorp/memberlist"
 	"github.com/istoican/flux/consistent"
 )
@@ -55,6 +58,20 @@ func (node *Node) Shutdown() error {
 func (node *Node) NotifyJoin(n *memberlist.Node) {
 	node.peers.Add(n.Name)
 	node.config.OnJoin(n.Name)
+
+	go func() {
+		peer := node.config.Picker.Pick(n.Name)
+		for _, key := range node.config.Store.Keys() {
+			id := node.peers.Get(key).Address
+			if id != n.Name {
+				continue
+			}
+			if err := node.move(key, peer); err != nil {
+				log.Println(err)
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}()
 }
 
 // NotifyLeave :
@@ -66,4 +83,18 @@ func (node *Node) NotifyLeave(n *memberlist.Node) {
 // NotifyUpdate :
 func (node *Node) NotifyUpdate(n *memberlist.Node) {
 
+}
+
+func (node *Node) move(key string, to Peer) error {
+	val, err := node.config.Store.Get(key)
+	if err != nil {
+		return err
+	}
+	if err := to.Put(key, val); err != nil {
+		return err
+	}
+	if err := node.config.Store.Del(key); err != nil {
+		return err
+	}
+	return nil
 }

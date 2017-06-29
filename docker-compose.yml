@@ -1,96 +1,96 @@
 version: '2'
 
 services:
-  flux1:
+  node1:
     build: ./cmd/fluxd
-    hostname: flux1
+    hostname: node1
     entrypoint: fluxd -hashfn=md5
     expose:
       - "8080"
       - "7946"
     ports:
       - "3001:8080"
-  flux2:
+  node2:
     build: ./cmd/fluxd
-    hostname: flux2
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node2
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux3:
+      - node1
+  node3:
     build: ./cmd/fluxd
-    hostname: flux3
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node3
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux4:
+      - node1
+  node4:
     build: ./cmd/fluxd
-    hostname: flux4
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node4
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux5:
+      - node1
+  node5:
     build: ./cmd/fluxd
-    hostname: flux5
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node5
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux6:
+      - node1
+  node6:
     build: ./cmd/fluxd
-    hostname: flux6
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node6
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux7:
+      - node1
+  node7:
     build: ./cmd/fluxd
-    hostname: flux7
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node7
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux8:
+      - node1
+  node8:
     build: ./cmd/fluxd
-    hostname: flux8
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node8
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux9:
+      - node1
+  node9:
     build: ./cmd/fluxd
-    hostname: flux9
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node9
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
-  flux10:
+      - node1
+  node10:
     build: ./cmd/fluxd
-    hostname: flux10
-    entrypoint: fluxd -hashfn=md5 -join=flux1
+    hostname: node10
+    entrypoint: fluxd -hashfn=md5 -join=node1
     expose:
       - "8080"
       - "7946"
     links:
-      - flux1
+      - node1
   client:
     build: ./cmd/flux
     entrypoint: flux -server=flux1

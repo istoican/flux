@@ -33,6 +33,18 @@ func (db *GoLevelDB) Del(key string) error {
 	return db.backend.Delete([]byte(key), nil)
 }
 
+// Keys :
+func (db *GoLevelDB) Keys() []string {
+	it := db.backend.NewIterator(nil, nil)
+	keys := make([]string, 0)
+	i := 0
+	for it.Next() {
+		keys[i] = string(it.Key())
+		i++
+	}
+	return keys
+}
+
 // Close :
 func (db *GoLevelDB) Close() error {
 	return db.backend.Close()
