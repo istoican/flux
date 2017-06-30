@@ -36,7 +36,7 @@ func (n *Node) Peer(key string) (transport.Peer, string) {
 // Get :
 func (n *Node) Get(key string) ([]byte, error) {
 	addr := n.ring.Get(key).Address
-	//log.Println("Id: ", id, node.config.ID)
+
 	if addr == n.addr {
 		n.metrics.Reads.Increment()
 		return n.store.Get(key)
@@ -48,7 +48,7 @@ func (n *Node) Get(key string) ([]byte, error) {
 // Put :
 func (n *Node) Put(key string, value []byte) error {
 	addr := n.ring.Get(key).Address
-	//log.Println("PUT internal id: ", id)
+
 	if addr == n.addr {
 		if err := n.store.Put(key, value); err != nil {
 			return err
@@ -59,7 +59,7 @@ func (n *Node) Put(key string, value []byte) error {
 		return nil
 	}
 	peer := n.peers[addr]
-	//log.Println("PUT forward to peer: ", peer)
+
 	return peer.Put(key, value)
 }
 
@@ -123,7 +123,6 @@ func (n *Node) move(key string, to transport.Peer) error {
 		return err
 	}
 	n.metrics.Keys.Set(int64(len(n.store.Keys())))
-	log.Println("MOVED: ", n.metrics.Keys)
 	return nil
 }
 
