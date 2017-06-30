@@ -17,7 +17,12 @@ func main() {
 
 	http.HandleFunc("/", indexHandler)
 
-	go record(server)
+	vars, err := Expvar(server)
+	if err != nil {
+		log.Panic(err)
+	}
+	stats.Nodes = vars.Flux.Members
+	go record()
 
 	log.Println("starting client")
 	if err := http.ListenAndServe(":80", nil); err != nil {

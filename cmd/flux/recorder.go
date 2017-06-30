@@ -5,71 +5,114 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"reflect"
+	"sync"
 	"time"
 )
 
 var (
-	stats []Stats
+	stats  *Stats
+	client http.Client
 )
 
-type Nodes map[string]string
-
-type Timeline []time.Time
-
-// Stats :
-type Stats struct {
-	Nodes    Nodes
-	Timeline Timeline
-	Metrics  map[string]Metrics
-}
-
-type Metrics struct {
-	Memory    uint64 `json:"memory"`
-	Reads     int64  `json:"reads"`
-	Keys      int64  `json:"keys"`
-	Deletions int64  `json:"deletions"`
-	Inserts   int64  `json:"inserts"`
-}
-
-func record(server string) {
-	if _, err := read(server); err != nil {
-		log.Println(err)
+func init() {
+	client = http.Client{
+		Timeout: time.Duration(100 * time.Millisecond),
+	}
+	stats = &Stats{
+		Nodes:   make(map[string]string),
+		Metrics: make(map[time.Time]map[string]*Metrics),
 	}
 }
 
-func read(node string) (nodeInfo, error) {
-	info := nodeInfo{}
-	vr := map[string]interface{}{}
+type expvar struct {
+	Flux struct {
+		Members map[string]string
+		Stats   struct {
+			Reads     uint64
+			Keys      uint64
+			Deletions uint64
+			Inserts   uint64
+		}
+	}
+	Memory struct {
+		Alloc uint64
+	} `json:"memstats"`
+}
+
+// Expvar :
+func Expvar(node string) (expvar, error) {
+	vars := expvar{}
 	resp, err := http.Get("http://" + node + ":8080/debug/vars")
 	if err != nil {
-		return info, err
+		return vars, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	if err := json.Unmarshal(body, &vr); err != nil {
-		return info, err
+	if err := json.Unmarshal(body, &vars); err != nil {
+		return vars, err
 	}
-	v := reflect.ValueOf(vr)
+	return vars, nil
+}
 
-	vars := v.MapIndex(reflect.ValueOf("flux"))
+// Stats :
+type Stats struct {
+	sync.RWMutex
+	Nodes   map[string]string                 `json:"nodes"`
+	Metrics map[time.Time]map[string]*Metrics `json:"metrics"`
+}
 
-	members := vars.Elem().MapIndex(reflect.ValueOf("members")).Elem()
-	m := make([]string, 0)
+// Metrics :
+type Metrics struct {
+	Memory    uint64 `json:"memory"`
+	Reads     uint64 `json:"reads"`
+	Keys      uint64 `json:"keys"`
+	Deletions uint64 `json:"deletions"`
+	Inserts   uint64 `json:"inserts"`
+}
 
-	for _, k := range members.MapKeys() {
-		v := members.MapIndex(k).Elem()
-		m = append(m, k.String())
-		m = append(m, v.String())
+func (s *Stats) addNodes(nodes map[string]string) {
+	s.Lock()
+	defer s.Unlock()
+
+	for k, v := range nodes {
+		s.Nodes[k] = v
 	}
-	stats := vars.Elem().MapIndex(reflect.ValueOf("stats")).Elem()
-	m2 := make([]string, 0)
+}
 
-	for _, k := range stats.MapKeys() {
-		v := stats.MapIndex(k).Elem()
-		m2 = append(m2, k.String())
-		m2 = append(m2, v.String())
+func (s *Stats) addMetrics(date time.Time, metrics map[string]*Metrics) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.Metrics[date] = metrics
+}
+
+func record() {
+	for {
+		t := time.Now()
+		metrics := make(map[string]*Metrics)
+		var wg sync.WaitGroup
+		for k, v := range stats.Nodes {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				vars, err := Expvar(v)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				metrics[k] = &Metrics{
+					Memory:    vars.Memory.Alloc,
+					Inserts:   vars.Flux.Stats.Inserts,
+					Keys:      vars.Flux.Stats.Keys,
+					Reads:     vars.Flux.Stats.Reads,
+					Deletions: vars.Flux.Stats.Deletions,
+				}
+				stats.addNodes(vars.Flux.Members)
+			}()
+		}
+		wg.Wait()
+		stats.addMetrics(t, metrics)
+
+		time.Sleep(1 * time.Second)
 	}
-	log.Println(m2)
-	return info, nil
 }

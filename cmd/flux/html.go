@@ -96,52 +96,25 @@ const html = `
 			];
 		
 			function get_columns(data, type, getter) {
-				var output = [],
-					columns = {};
+				var output = [];
 
-				for (var i = 0; i < data.length; i++) {
-					if (columns['x'] == undefined) {
-						columns['x'] = [];
-					} 
-					columns['x'].push(new Date(data[i].date));
-					for (var j = 0; j < data[i].stats.length; j++) {
-						var node = data[i].stats[j].node;
-						var val = data[i].stats[j][type];
-						if (columns[node] == undefined) {
-							columns[node] = [];
-						}
-						columns[node].push(getter? getter(val) : val); 
-					}
-				}
-
-				var keys = Object.keys(columns);
-				for (var i = 0; i < keys.length; i++) {
-					var key = keys[i];
-					output.push([key].concat(columns[key]));
-				}
+				Object.keys(data.nodes).forEach(function(node) {
+					var col = [node];
+					Object.keys(data.metrics).forEach(function(date) {
+						var val = data.metrics[date][node] ? data.metrics[date][node][type] : 0;
+						col.push(getter? getter(val) : val)
+					});
+					output.push(col);
+				});
 				return output;
 			}
 
-		  	function draw(type, label, getter) {
-				var columns = get_columns(__DATA__, type, getter);  
-				var dataTypes = {};
-				var dataGroups = [];
-
-				for (var i = 1; i < columns.length; i++) {
-					dataGroups.push(columns[i][0]);
-				}
-
-				for (var i = 0; i < dataGroups.length; i++) {
-					dataTypes[dataGroups[i]] = 'area-spline';
-				}
-
+		  	function draw(type, label, columns) {
 				c3.generate({
 					bindto: '#' + type + '-chart',
 					data: {
 						x: 'x',
 						columns: columns,
-						//types: dataTypes,
-						//groupd: dataGroups
 					},
 					point: {
 						show: false
@@ -166,16 +139,17 @@ const html = `
 			};
 			
 			function overview() {
-				var keys = [],
-					sum = 0;
-					nodes = __DATA__[__DATA__.length - 1].stats;
+				var sum = 0;
+				var date = Object.keys(__DATA__.metrics).reduce(function(max, cur){ return max > cur ? max : cur });
+				var keys = Object.keys(__DATA__.metrics[date]).map(function(key) {
+					var k = __DATA__.nodes[key] + "(" + key + ")";
+					var v = __DATA__.metrics[date][key].keys;
 
-				for (var i = 0; i < nodes.length; i++) {
-					var n = nodes[i].node,
-						v = nodes[i].keys;
 					sum = sum + v;
-					keys.push([n, v]);
-				}
+					
+					return [k, v]
+				});
+				
 				c3.generate({
 					bindto: '#overview-chart',
 					data: {
@@ -190,12 +164,11 @@ const html = `
 
 			(function () {
 				overview();
+				var x = ['x'].concat(Object.keys(__DATA__.metrics).map(k => new Date(k)));
+				
 				for (var i = 0; i < chartTypes.length; i++) {
-					var type = chartTypes[i].type;
-					var label = chartTypes[i].label;
-					var getter = chartTypes[i].getter;
-
-					draw(type, label, getter);
+					var columns = get_columns(__DATA__, chartTypes[i].type, chartTypes[i].getter);
+					draw(chartTypes[i].type, chartTypes[i].label, [x].concat(columns));
 				}
 			})();
   	</script>
