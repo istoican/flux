@@ -4,8 +4,8 @@ import (
 	"sync/atomic"
 )
 
-// Stats :
-type Stats struct {
+// Metrics :
+type Metrics struct {
 	Keys      Int
 	Deletions Int
 	Inserts   Int

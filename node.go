@@ -2,104 +2,175 @@ package flux
 
 import (
 	"log"
-	"time"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/istoican/flux/consistent"
+	"github.com/istoican/flux/storage"
+	"github.com/istoican/flux/transport"
 )
 
 // Node :
 type Node struct {
-	config Config
-	peers  *consistent.Ring
-	event  listener
-	Stats  Stats
+	addr       string
+	store      storage.Store
+	ring       *consistent.Ring
+	memberlist *memberlist.Memberlist
+	metrics    Metrics
+	peerFn     func(addr string) transport.Peer
+	peers      map[string]transport.Peer
+	watchers   map[string][]*Watcher
+}
+
+// Addr :
+func (n *Node) Local(key string) bool {
+	return n.ring.Get(key).Address == n.addr
+}
+
+// Addr :
+func (n *Node) Peer(key string) (transport.Peer, string) {
+	addr := n.ring.Get(key).Address
+	peer := n.peers[addr]
+	return peer, addr
 }
 
 // Get :
-func (node *Node) Get(key string) ([]byte, error) {
-	id := node.peers.Get(key).Address
+func (n *Node) Get(key string) ([]byte, error) {
+	addr := n.ring.Get(key).Address
 	//log.Println("Id: ", id, node.config.ID)
-	if id == node.config.ID {
-		node.Stats.Reads.Increment()
-		return node.config.Store.Get(key)
+	if addr == n.addr {
+		n.metrics.Reads.Increment()
+		return n.store.Get(key)
 	}
-	peer := node.config.Picker.Pick(id)
+	peer := n.peers[addr]
 	return peer.Get(key)
 }
 
 // Put :
-func (node *Node) Put(key string, value []byte) error {
-	id := node.peers.Get(key).Address
+func (n *Node) Put(key string, value []byte) error {
+	addr := n.ring.Get(key).Address
 	//log.Println("PUT internal id: ", id)
-	if id == node.config.ID {
-		if err := node.config.Store.Put(key, value); err != nil {
+	if addr == n.addr {
+		if err := n.store.Put(key, value); err != nil {
 			return err
 		}
-		node.Stats.Inserts.Increment()
-		node.Stats.Keys.Set(int64(len(node.config.Store.Keys())))
-		node.event.trigger(key, &Event{Type: "put", Value: value})
+		n.metrics.Inserts.Increment()
+		n.metrics.Keys.Set(int64(len(n.store.Keys())))
+		n.trigger(key, &Event{Type: "put", Value: string(value)})
 		return nil
 	}
-	peer := node.config.Picker.Pick(id)
+	peer := n.peers[addr]
 	//log.Println("PUT forward to peer: ", peer)
 	return peer.Put(key, value)
 }
 
 // Watch :
-func (node *Node) Watch(key string) *Watcher {
-	return node.event.watch(key)
+func (n *Node) Watch(key string) *Watcher {
+	return n.watch(key)
 }
 
 // Shutdown :
-func (node *Node) Shutdown() error {
-	return node.config.Store.Close()
+func (n *Node) Shutdown() error {
+	return n.store.Close()
 }
 
 // NotifyJoin :
-func (node *Node) NotifyJoin(n *memberlist.Node) {
-	node.peers.Add(n.Name)
-	node.config.OnJoin(n.Name)
+func (n *Node) NotifyJoin(node *memberlist.Node) {
+	peer := n.peerFn(node.Name)
+	n.ring.Add(node.Name)
+	n.peers[node.Name] = peer
 
-	go func() {
-		peer := node.config.Picker.Pick(n.Name)
-		for _, key := range node.config.Store.Keys() {
-			id := node.peers.Get(key).Address
-			if id != n.Name {
-				continue
-			}
-			if err := node.move(key, peer); err != nil {
-				log.Println(err)
-			}
-			time.Sleep(time.Millisecond)
+	for k := range n.watchers {
+		peer2, addr := n.Peer(k)
+		if peer2 == peer {
+			n.trigger(k, &Event{Type: "moved", Value: addr})
 		}
-	}()
+	}
 }
 
 // NotifyLeave :
-func (node *Node) NotifyLeave(n *memberlist.Node) {
-	node.peers.Remove(n.Name)
-	//log.Println("PEERS2: ", node.peers)
-	node.config.OnLeave(n.Name)
+func (n *Node) NotifyLeave(node *memberlist.Node) {
+	n.ring.Remove(node.Name)
+	delete(n.peers, node.Name)
 }
 
 // NotifyUpdate :
-func (node *Node) NotifyUpdate(n *memberlist.Node) {
+func (n *Node) NotifyUpdate(node *memberlist.Node) {
 
 }
 
-func (node *Node) move(key string, to Peer) error {
-	val, err := node.config.Store.Get(key)
+func (n *Node) rebalance() {
+	for _, key := range n.store.Keys() {
+		addr := n.ring.Get(key).Address
+		if addr == n.addr {
+			continue
+		}
+		peer := n.peers[addr]
+		if err := n.move(key, peer); err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func (n *Node) move(key string, to transport.Peer) error {
+	val, err := n.store.Get(key)
 	if err != nil {
 		return err
 	}
 	if err := to.Put(key, val); err != nil {
 		return err
 	}
-	if err := node.config.Store.Del(key); err != nil {
+	if err := n.store.Del(key); err != nil {
 		return err
 	}
-	node.Stats.Keys.Set(int64(len(node.config.Store.Keys())))
-	log.Println("MOVED: ", node.Stats.Keys.Value())
+	n.metrics.Keys.Set(int64(len(n.store.Keys())))
+	log.Println("MOVED: ", n.metrics.Keys)
 	return nil
+}
+
+// Metrics :
+func (n *Node) Metrics() interface{} {
+	members := make(map[string]string)
+	for _, v := range n.memberlist.Members() {
+		members[v.Name] = v.Addr.String()
+	}
+	return map[string]interface{}{
+		"stats":   n.metrics,
+		"members": members,
+	}
+}
+
+// Join :
+func (n *Node) Join(address string) error {
+	if address == "" {
+		return nil
+	}
+	_, err := n.memberlist.Join([]string{address})
+
+	return err
+}
+
+func (n *Node) watch(path string) *Watcher {
+	w := &Watcher{Channel: make(chan *Event, 100)}
+
+	if _, ok := n.watchers[path]; !ok {
+		n.watchers[path] = make([]*Watcher, 0)
+	}
+
+	n.watchers[path] = append(n.watchers[path], w)
+
+	w.Remove = func() {
+	}
+
+	return w
+}
+
+func (n *Node) trigger(path string, e *Event) {
+	watchers, ok := n.watchers[path]
+	if !ok {
+		return
+	}
+
+	for _, w := range watchers {
+		w.notify(e)
+	}
 }

@@ -7,15 +7,17 @@ import (
 	"github.com/istoican/flux/consistent/hash"
 	"github.com/istoican/flux/storage"
 	"github.com/istoican/flux/storage/memory"
+	"github.com/istoican/flux/transport"
+	"github.com/istoican/flux/transport/http/peer"
 )
 
 // Config :
 type Config struct {
-	ID      string
+	Addr    string
 	Store   storage.Store
 	OnJoin  func(id string)
 	OnLeave func(id string)
-	Picker  Picker
+	PeerFn  func(string) transport.Peer
 	HashFn  consistent.HashFn
 }
 
@@ -24,8 +26,9 @@ func DefaultConfig() Config {
 	hostname, _ := os.Hostname()
 
 	return Config{
-		ID:     hostname,
+		Addr:   hostname,
 		Store:  memory.NewStore(),
 		HashFn: hash.CRC32,
+		PeerFn: peer.New,
 	}
 }

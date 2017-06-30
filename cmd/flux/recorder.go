@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"runtime"
+	"reflect"
 	"time"
 )
 
@@ -13,14 +13,18 @@ var (
 	stats []Stats
 )
 
+type Nodes map[string]string
+
+type Timeline []time.Time
+
 // Stats :
 type Stats struct {
-	Date  time.Time  `json:"date"`
-	Stats []nodeInfo `json:"stats"`
+	Nodes    Nodes
+	Timeline Timeline
+	Metrics  map[string]Metrics
 }
 
-type nodeInfo struct {
-	Node      string `json:"node"`
+type Metrics struct {
 	Memory    uint64 `json:"memory"`
 	Reads     int64  `json:"reads"`
 	Keys      int64  `json:"keys"`
@@ -28,80 +32,44 @@ type nodeInfo struct {
 	Inserts   int64  `json:"inserts"`
 }
 
-type expvars struct {
-	Memstats runtime.MemStats
-	Flux     fluxStats
-}
-
-type fluxStats struct {
-	Keys      int64
-	Deletions int64
-	Inserts   int64
-	Reads     int64
-}
-
 func record(server string) {
-	for {
-		var i []nodeInfo
-		servers, err := nodes(server)
-		if err != nil {
-			log.Panicln(err)
-			continue
-		}
-		for _, server := range servers {
-			info, err := read(server)
-			if err != nil {
-				log.Println(err)
-			}
-			i = append(i, info)
-		}
-		stats = append(stats, Stats{Date: time.Now(), Stats: i})
-
-		if len(stats) > 3600 {
-			stats = stats[1:]
-		}
-		time.Sleep(1 * time.Second)
+	if _, err := read(server); err != nil {
+		log.Println(err)
 	}
-}
-
-func nodes(node string) ([]string, error) {
-	var data map[string]string
-
-	resp, err := http.Get("http://" + node + ":8080/debug/nodes")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err := json.Unmarshal(body, &data); err != nil {
-		return nil, err
-	}
-	output := make([]string, 0)
-	for _, v := range data {
-		output = append(output, v)
-	}
-
-	return output, nil
 }
 
 func read(node string) (nodeInfo, error) {
-	info := nodeInfo{Node: node}
-
-	exp := expvars{}
+	info := nodeInfo{}
+	vr := map[string]interface{}{}
 	resp, err := http.Get("http://" + node + ":8080/debug/vars")
 	if err != nil {
 		return info, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	//log.Println("BODY: ", string(body))
-	if err := json.Unmarshal(body, &exp); err != nil {
+	if err := json.Unmarshal(body, &vr); err != nil {
 		return info, err
 	}
-	info.Memory = exp.Memstats.Alloc
-	info.Reads = exp.Flux.Reads
-	info.Deletions = exp.Flux.Deletions
-	info.Inserts = exp.Flux.Inserts
-	info.Keys = exp.Flux.Keys
+	v := reflect.ValueOf(vr)
+
+	vars := v.MapIndex(reflect.ValueOf("flux"))
+
+	members := vars.Elem().MapIndex(reflect.ValueOf("members")).Elem()
+	m := make([]string, 0)
+
+	for _, k := range members.MapKeys() {
+		v := members.MapIndex(k).Elem()
+		m = append(m, k.String())
+		m = append(m, v.String())
+	}
+	stats := vars.Elem().MapIndex(reflect.ValueOf("stats")).Elem()
+	m2 := make([]string, 0)
+
+	for _, k := range stats.MapKeys() {
+		v := stats.MapIndex(k).Elem()
+		m2 = append(m2, k.String())
+		m2 = append(m2, v.String())
+	}
+	log.Println(m2)
 	return info, nil
 }
