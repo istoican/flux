@@ -1,14 +1,21 @@
-package http
+package peer
 
 import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/istoican/flux/transport"
 )
 
 // Peer :
 type Peer struct {
 	address string
+}
+
+// New :
+func New(addr string) transport.Peer {
+	return Peer{addr}
 }
 
 func (peer Peer) String() string {

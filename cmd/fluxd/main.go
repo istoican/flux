@@ -6,12 +6,10 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"time"
-
 	"github.com/istoican/flux"
 	"github.com/istoican/flux/consistent/hash"
 	"github.com/istoican/flux/storage/disk"
-	transport "github.com/istoican/flux/transport/http"
+	"github.com/istoican/flux/transport/http/handler"
 )
 
 var (
@@ -30,9 +28,6 @@ func main() {
 	flag.Parse()
 
 	config := flux.DefaultConfig()
-	config.OnJoin = transport.Join
-	config.OnLeave = transport.Leave
-	config.Picker = transport.Handler()
 
 	if storageType == "disk" {
 		db, err := disk.NewStore("flux.data")
@@ -44,14 +39,19 @@ func main() {
 	if hashFn == "md5" {
 		config.HashFn = hash.MD5
 	}
-	flux.Start(config)
+	node, err := flux.New(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	go func() {
-		time.Sleep(100 * time.Millisecond)
-		if err := flux.Join(joinAddress); err != nil {
+		if err := node.Join(joinAddress); err != nil {
 			log.Println(err)
 		}
 	}()
+
+	http.Handle("/", handler.New(node))
+
 	log.Println("starting node")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
