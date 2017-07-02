@@ -86,20 +86,33 @@ func (s *Stats) addMetrics(date time.Time, metrics map[string]*Metrics) {
 	s.Metrics[date] = metrics
 }
 
+func (s *Stats) MarshalJSON() ([]byte, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	return json.Marshal(map[string]interface{}{
+		"nodes":   s.Nodes,
+		"metrics": s.Metrics,
+	})
+}
+
 func record() {
 	for {
 		t := time.Now()
 		metrics := make(map[string]*Metrics)
 		var wg sync.WaitGroup
+		var mu sync.Mutex
+		stats.RLock()
 		for k, v := range stats.Nodes {
 			wg.Add(1)
-			go func() {
+			go func(k string, v string) {
 				defer wg.Done()
 				vars, err := Expvar(v)
 				if err != nil {
 					log.Println(err)
 					return
 				}
+				mu.Lock()
 				metrics[k] = &Metrics{
 					Memory:    vars.Memory.Alloc,
 					Inserts:   vars.Flux.Stats.Inserts,
@@ -107,9 +120,11 @@ func record() {
 					Reads:     vars.Flux.Stats.Reads,
 					Deletions: vars.Flux.Stats.Deletions,
 				}
+				mu.Unlock()
 				stats.addNodes(vars.Flux.Members)
-			}()
+			}(k, v)
 		}
+		stats.RUnlock()
 		wg.Wait()
 		stats.addMetrics(t, metrics)
 

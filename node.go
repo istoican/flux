@@ -3,6 +3,10 @@ package flux
 import (
 	"log"
 
+	"sync"
+
+	"time"
+
 	"github.com/hashicorp/memberlist"
 	"github.com/istoican/flux/consistent"
 	"github.com/istoican/flux/storage"
@@ -11,6 +15,7 @@ import (
 
 // Node :
 type Node struct {
+	mu         sync.RWMutex
 	addr       string
 	store      storage.Store
 	ring       *consistent.Ring
@@ -28,6 +33,9 @@ func (n *Node) Local(key string) bool {
 
 // Addr :
 func (n *Node) Peer(key string) (transport.Peer, string) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	addr := n.ring.Get(key).Address
 	peer := n.peers[addr]
 	return peer, addr
@@ -35,6 +43,9 @@ func (n *Node) Peer(key string) (transport.Peer, string) {
 
 // Get :
 func (n *Node) Get(key string) ([]byte, error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	addr := n.ring.Get(key).Address
 
 	if addr == n.addr {
@@ -47,6 +58,9 @@ func (n *Node) Get(key string) ([]byte, error) {
 
 // Put :
 func (n *Node) Put(key string, value []byte) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	addr := n.ring.Get(key).Address
 
 	if addr == n.addr {
@@ -75,6 +89,9 @@ func (n *Node) Shutdown() error {
 
 // NotifyJoin :
 func (n *Node) NotifyJoin(node *memberlist.Node) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	peer := n.peerFn(node.Name)
 	n.ring.Add(node.Name)
 	n.peers[node.Name] = peer
@@ -89,6 +106,9 @@ func (n *Node) NotifyJoin(node *memberlist.Node) {
 
 // NotifyLeave :
 func (n *Node) NotifyLeave(node *memberlist.Node) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
 	n.ring.Remove(node.Name)
 	delete(n.peers, node.Name)
 }
@@ -100,14 +120,18 @@ func (n *Node) NotifyUpdate(node *memberlist.Node) {
 
 func (n *Node) rebalance() {
 	for _, key := range n.store.Keys() {
+		n.mu.Lock()
 		addr := n.ring.Get(key).Address
 		if addr == n.addr {
+			n.mu.Unlock()
 			continue
 		}
 		peer := n.peers[addr]
 		if err := n.move(key, peer); err != nil {
 			log.Println(err)
 		}
+		n.mu.Unlock()
+		time.Sleep(1 * time.Millisecond)
 	}
 }
 
@@ -128,6 +152,9 @@ func (n *Node) move(key string, to transport.Peer) error {
 
 // Metrics :
 func (n *Node) Metrics() interface{} {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
 	members := make(map[string]string)
 	for _, v := range n.memberlist.Members() {
 		members[v.Name] = v.Addr.String()
