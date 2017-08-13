@@ -1,6 +1,7 @@
 package consistent
 
-// New :
+// Package consistent provides a consistent hashing function.
+
 func New(fn HashFn) *Ring {
 	nodes := []Node{}
 	return &Ring{

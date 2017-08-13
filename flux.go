@@ -8,7 +8,10 @@ import (
 	"github.com/istoican/flux/transport"
 )
 
-// New :
+// Initializes a new Node with the provided configuration.
+// It sets up the consistent hash ring, initializes peer connections,
+// configures the memberlist for managing cluster membership,
+// and starts a goroutine for periodically rebalancing local stored keys.
 func New(config Config) (*Node, error) {
 	n := &Node{
 		addr:     config.Addr,
@@ -29,11 +32,13 @@ func New(config Config) (*Node, error) {
 	}
 	n.memberlist = memberlist
 
+	// periodically rebalance local stored keys
 	go func() {
 		for {
 			n.rebalance()
 			time.Sleep(1 * time.Second)
 		}
 	}()
+
 	return n, nil
 }

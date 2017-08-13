@@ -10,7 +10,6 @@ import (
 	"github.com/istoican/flux"
 )
 
-// New :
 func New(node *flux.Node) http.Handler {
 	expvar.Publish("flux", expvar.Func(node.Metrics))
 	return &server{node}

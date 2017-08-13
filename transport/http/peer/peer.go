@@ -8,12 +8,10 @@ import (
 	"github.com/istoican/flux/transport"
 )
 
-// Peer :
 type Peer struct {
 	address string
 }
 
-// New :
 func New(addr string) transport.Peer {
 	return Peer{addr}
 }
@@ -22,7 +20,6 @@ func (peer Peer) String() string {
 	return peer.address
 }
 
-// Get :
 func (peer Peer) Get(key string) ([]byte, error) {
 	resp, err := http.Get("http://" + peer.address + ":8080/" + key)
 	if err != nil {
@@ -36,9 +33,7 @@ func (peer Peer) Get(key string) ([]byte, error) {
 	return body, nil
 }
 
-// Put :
 func (peer Peer) Put(key string, value []byte) error {
-	//log.Println("http PUT: ", peer.address)
 	buf := bytes.NewReader(value)
 	resp, err := http.Post("http://"+peer.address+":8080/"+key, "text/plain", buf)
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 )
 
-// Metrics :
+// Metrics holds the counters for various operations in the node such as key inserts, deletions, reads, and total number of keys.
 type Metrics struct {
 	Keys      Int
 	Deletions Int
@@ -12,20 +12,16 @@ type Metrics struct {
 	Reads     Int
 }
 
-// Int :
 type Int int64
 
-// Increment :
 func (c *Int) Increment() {
 	atomic.AddInt64((*int64)(c), 1)
 }
 
-// Decrement :
 func (c *Int) Decrement() {
 	atomic.AddInt64((*int64)(c), -1)
 }
 
-// Set :
 func (c *Int) Set(v int64) {
 	atomic.StoreInt64((*int64)(c), v)
 }

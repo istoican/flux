@@ -2,34 +2,36 @@ package consistent
 
 import (
 	"sort"
+	"strconv"
 )
 
 const (
 	replicas = 256
 )
 
-// HashFn :
+// HashFn is responsible for generating unsigned, 32-bit hash of provided string.
+// It should minimize collisions (generating same hash for different string
 type HashFn func(string) uint32
 
-// Ring :
+// Ring provides an implementation of a ring hash.
 type Ring struct {
 	nodes  Nodes
 	hashFn HashFn
 }
 
-// Add : Add a new node to the ring
+// Add a new node to the ring
 func (r *Ring) Add(address string) {
 	for i := 0; i < replicas; i++ {
 		node := Node{
 			Address: address,
-			hash:    r.hashFn(string(i) + address),
+			hash:    r.hashFn(strconv.Itoa(i) + address),
 		}
 		r.nodes = append(r.nodes, node)
 	}
 	sort.Sort(r.nodes)
 }
 
-// Remove :
+// Remove a node from the ring
 func (r *Ring) Remove(address string) {
 	nodes := r.nodes[:0]
 	for _, n := range r.nodes {
@@ -40,7 +42,7 @@ func (r *Ring) Remove(address string) {
 	r.nodes = nodes
 }
 
-// Get :
+// Giving a key it returns an node
 func (r *Ring) Get(key string) Node {
 	hash := r.hashFn(key)
 	f := func(i int) bool {

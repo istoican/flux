@@ -11,7 +11,6 @@ import (
 	"github.com/istoican/flux/transport/http/peer"
 )
 
-// Config :
 type Config struct {
 	Addr    string
 	Store   storage.Store
@@ -21,7 +20,7 @@ type Config struct {
 	HashFn  consistent.HashFn
 }
 
-// DefaultConfig :
+// Provides a convenient way to create a configuration with default values.
 func DefaultConfig() Config {
 	hostname, _ := os.Hostname()
 

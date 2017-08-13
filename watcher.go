@@ -1,6 +1,11 @@
 package flux
 
-// Watcher :
+type Event struct {
+	Type  string
+	Value interface{}
+}
+
+// Watcher implements a simple event notification bus system
 type Watcher struct {
 	Channel chan *Event
 	Remove  func()

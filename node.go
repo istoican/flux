@@ -13,7 +13,8 @@ import (
 	"github.com/istoican/flux/transport"
 )
 
-// Node :
+// Represents a node in the distributed system. It manges key distribution using a consistent hash ring
+// Interacts with other nodes using the memberlist package.
 type Node struct {
 	mu         sync.RWMutex
 	addr       string
@@ -26,12 +27,12 @@ type Node struct {
 	watchers   map[string][]*Watcher
 }
 
-// Addr :
+// Checks if a given key belongs to the local node based on the consistent hash ring.
 func (n *Node) Local(key string) bool {
 	return n.ring.Get(key).Address == n.addr
 }
 
-// Addr :
+// Retrieves the peer responsible for a given key and returns both the peer and its address.
 func (n *Node) Peer(key string) (transport.Peer, string) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -41,7 +42,7 @@ func (n *Node) Peer(key string) (transport.Peer, string) {
 	return peer, addr
 }
 
-// Get :
+// Retrieves the value for a given key. If the key is not local, it forwards the request to the appropriate peer.
 func (n *Node) Get(key string) ([]byte, error) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -56,7 +57,7 @@ func (n *Node) Get(key string) ([]byte, error) {
 	return peer.Get(key)
 }
 
-// Put :
+// Stores a key-value pair. It the key is not local, it forwards the request to the appropriate peer.
 func (n *Node) Put(key string, value []byte) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -77,17 +78,17 @@ func (n *Node) Put(key string, value []byte) error {
 	return peer.Put(key, value)
 }
 
-// Watch :
+// Sets up a watcher for a given key.
 func (n *Node) Watch(key string) *Watcher {
 	return n.watch(key)
 }
 
-// Shutdown :
+// Close the node's attached storage.
 func (n *Node) Shutdown() error {
 	return n.store.Close()
 }
 
-// NotifyJoin :
+// Handle node membership changes in the cluster.
 func (n *Node) NotifyJoin(node *memberlist.Node) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -104,7 +105,6 @@ func (n *Node) NotifyJoin(node *memberlist.Node) {
 	}
 }
 
-// NotifyLeave :
 func (n *Node) NotifyLeave(node *memberlist.Node) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -113,11 +113,11 @@ func (n *Node) NotifyLeave(node *memberlist.Node) {
 	delete(n.peers, node.Name)
 }
 
-// NotifyUpdate :
 func (n *Node) NotifyUpdate(node *memberlist.Node) {
 
 }
 
+// Iterate over local keys and moves unassigned keys to the correct node.
 func (n *Node) rebalance() {
 	for _, key := range n.store.Keys() {
 		n.mu.Lock()
@@ -135,6 +135,7 @@ func (n *Node) rebalance() {
 	}
 }
 
+// Move a key from the local node to another node.
 func (n *Node) move(key string, to transport.Peer) error {
 	val, err := n.store.Get(key)
 	if err != nil {
@@ -150,7 +151,7 @@ func (n *Node) move(key string, to transport.Peer) error {
 	return nil
 }
 
-// Metrics :
+// Return statistics and membership information.
 func (n *Node) Metrics() interface{} {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -165,7 +166,7 @@ func (n *Node) Metrics() interface{} {
 	}
 }
 
-// Join :
+// Add an address to the cluster.
 func (n *Node) Join(address string) error {
 	if address == "" {
 		return nil
@@ -175,6 +176,7 @@ func (n *Node) Join(address string) error {
 	return err
 }
 
+// Set up a watcher for a given path.
 func (n *Node) watch(path string) *Watcher {
 	w := &Watcher{Channel: make(chan *Event, 100)}
 
@@ -190,6 +192,7 @@ func (n *Node) watch(path string) *Watcher {
 	return w
 }
 
+// Notifies watchers for a given path.
 func (n *Node) trigger(path string, e *Event) {
 	watchers, ok := n.watchers[path]
 	if !ok {
